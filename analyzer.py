@@ -1,40 +1,54 @@
-import re
 import sys
 
 print("Loop Parallelization Detector")
 print("--------------------------------")
 
-# get file name from command line
+if len(sys.argv) < 2:
+    print("Usage: python analyzer.py <c_file>")
+    sys.exit()
+
 filename = sys.argv[1]
 
 print(f"\nAnalyzing file: {filename}\n")
 
-# read the C program
-with open(filename, "r") as file:
-    code = file.read()
+with open(filename, "r") as f:
+    lines = f.readlines()
 
-# detect loops
-loops = re.findall(r'for\s*\(.*?\)', code)
-
-if not loops:
-    print("No loops found in the program.")
-    exit()
-
-print(f"Total loops found: {len(loops)}\n")
-
-# analyze each loop
 loop_number = 1
 
-for loop in loops:
-    print(f"Loop {loop_number}: {loop}")
+for i in range(len(lines)):
 
-    if "i-1" in code or "i+1" in code:
-        print("Dependency detected")
-        print("Loop cannot be parallelized\n")
+    line = lines[i].strip()
 
-    else:
-        print("No dependency detected")
-        print("Loop may be parallelized")
-        print("Suggested directive: #pragma omp parallel for\n")
+    if line.startswith("for"):
 
-    loop_number += 1
+        print(f"Loop {loop_number}: {line}")
+
+        body = ""
+        brace_count = 0
+        j = i
+
+        while j < len(lines):
+
+            if "{" in lines[j]:
+                brace_count += lines[j].count("{")
+
+            if "}" in lines[j]:
+                brace_count -= lines[j].count("}")
+
+            body += lines[j]
+
+            if brace_count == 0 and j > i:
+                break
+
+            j += 1
+
+        if "i-1" in body or "i+1" in body:
+            print("Dependency detected")
+            print("Loop cannot be parallelized\n")
+        else:
+            print("No dependency detected")
+            print("Loop may be parallelized")
+            print("Suggested directive: #pragma omp parallel for\n")
+
+        loop_number += 1
